@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+    <title>Environment Control</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <h1>Environment Control</h1>
+    
+    <div class='card'>
+        <h2>Current Status</h2>
+        <div class='input-group'>
+            <label>Current Time:</label>
+            <span class='value-display'><span id='currentTime'>--:--:--</span></span>
+        </div>
+        <div class='input-group'>
+            <label>Temperature:</label>
+            <span class='value-display'><span id='temperature'>--.-</span>&#176;C</span>
+        </div>
+        <div class='input-group'>
+            <label>Humidity:</label>
+            <span class='value-display'><span id='humidity'>--.-</span>%</span>
+        </div>
+        <div class='input-group'>
+            <label>Fog Status:</label>
+            <span class='value-display'><span id='fogStatus'>OFF</span></span>
+        </div>
+    </div>
+
+    <div class='card'>
+        <h2>Settings</h2>
+        <form action='/config' method='post'>
+            <div class='input-group'>
+                <label>Humidity Setpoint:</label>
+                <input type='number' name='setpoint' step='0.1' value='90.0' min='0' max='100' required>
+                <span>%</span>
+            </div>
+            <div class='input-group'>
+                <input type='submit' class='button' value='Update Settings'>
+            </div>
+        </form>
+    </div>
+
+    <div class='card'>
+        <h2>Fan Control</h2>
+        <div class='input-group'>
+            <label>Mode:</label>
+            <button class='button' onclick='updateFan("mode")'>
+                <span id='fanMode'>Auto</span>
+            </button>
+        </div>
+        <div class='input-group'>
+            <label>Power:</label>
+            <button class='button' id='fanPowerBtn' onclick='updateFan("toggle")'>
+                <span id='fanPower'>OFF</span>
+            </button>
+        </div>
+        <form action='/fan-control' method='post'>
+            <div class='input-group'>
+                <label>On Duration (minutes):</label>
+                <input type='number' name='duration' value='5' min='1' max='60' required>
+            </div>
+            <div class='input-group'>
+                <label>Interval (hours):</label>
+                <input type='number' name='interval' value='4' min='1' max='24' required>
+            </div>
+            <div class='input-group'>
+                <input type='submit' class='button' value='Update Fan Settings'>
+            </div>
+        </form>
+    </div>
+
+    <div class='card'>
+        <h2>Temperature History</h2>
+        <div class='chart-controls'>
+            <button class='button' onclick='changeTimeRange("tempChart", "day")'>Day</button>
+            <button class='button' onclick='changeTimeRange("tempChart", "week")'>Week</button>
+            <button class='button' onclick='changeTimeRange("tempChart", "month")'>Month</button>
+        </div>
+        <div class='chart-container'>
+            <canvas id='tempChart'></canvas>
+        </div>
+    </div>
+
+    <div class='card'>
+        <h2>Humidity History</h2>
+        <div class='chart-controls'>
+            <button class='button' onclick='changeTimeRange("humChart", "day")'>Day</button>
+            <button class='button' onclick='changeTimeRange("humChart", "week")'>Week</button>
+            <button class='button' onclick='changeTimeRange("humChart", "month")'>Month</button>
+        </div>
+        <div class='chart-container'>
+            <canvas id='humChart'></canvas>
+        </div>
+    </div>
+
+    <div class='card'>
+        <h2>Data Storage Settings</h2>
+        <form action='/storage-config' method='post'>
+            <div class='input-group'>
+                <label>Storage Interval (minutes):</label>
+                <input type='number' name='interval' value='5' min='1' max='60' required>
+            </div>
+            <div class='input-group'>
+                <input type='submit' class='button' value='Update Interval'>
+            </div>
+        </form>
+        <div class='input-group' style='margin-top: 20px;'>
+            <button class='button danger' onclick='confirmDelete()'>Delete All Data</button>
+        </div>
+    </div>
+
+    <script src="/script.js"></script>
+</body>
+</html> 

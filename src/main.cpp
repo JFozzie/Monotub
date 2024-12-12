@@ -148,336 +148,15 @@ void handleConfig() {
     server.send(303);
 }
 
-// Generar página HTML
-String getHTML() {
-    String html = R"rawliteral(
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset='UTF-8'>
-    <meta name='viewport' content='width=device-width, initial-scale=1'>
-    <title>Environment Control</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f5f5f5; }
-        .card { background: #ffffff; padding: 20px; margin: 10px 0; border-radius: 8px;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .input-group { margin: 15px 0; display: flex; align-items: center; }
-        label { display: inline-block; width: 150px; color: #333; }
-        input[type="number"] { padding: 8px; border: 1px solid #ddd; border-radius: 4px; width: 120px; }
-        .button { background: #4CAF50; color: white; padding: 10px 20px; border: none;
-                 border-radius: 4px; cursor: pointer; }
-        .value-display { font-weight: bold; color: #2196F3; }
-        .chart-container {
-            position: relative;
-            height: 300px;
-            width: 100%;
-            margin: 20px 0;
-        }
-        .chart-controls {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin: 10px 0;
-        }
-        .button.danger {
-            background-color: #f44336;
-        }
-        .button.danger:hover {
-            background-color: #da190b;
-        }
-    </style>
-</head>
-<body>
-    <h1>Environment Control</h1>
-    
-    <div class='card'>
-        <h2>Current Status</h2>
-        <div class='input-group'>
-            <label>Current Time:</label>
-            <span class='value-display'><span id='currentTime'>)rawliteral" + 
-            String(timeClient.getFormattedTime()) + 
-            R"rawliteral(</span></span>
-        </div>
-        <div class='input-group'>
-            <label>Temperature:</label>
-            <span class='value-display'><span id='temperature'>)rawliteral" + 
-            String(lastTemp, 1) + R"rawliteral(</span>&#176;C</span>
-        </div>
-        <div class='input-group'>
-            <label>Humidity:</label>
-            <span class='value-display'><span id='humidity'>)rawliteral" + 
-            String(lastHumidity, 1) + R"rawliteral(</span>%</span>
-        </div>
-        <div class='input-group'>
-            <label>Fog Status:</label>
-            <span class='value-display'><span id='fogStatus'>)rawliteral" + 
-            String(fogPulseState ? "ON" : "OFF") + R"rawliteral(</span></span>
-        </div>
-    </div>
-
-    <div class='card'>
-        <h2>Settings</h2>
-        <form action='/config' method='post'>
-            <div class='input-group'>
-                <label>Humidity Setpoint:</label>
-                <input type='number' name='setpoint' step='0.1' 
-                       value=')rawliteral" + String(humiditySetpoint) + R"rawliteral(' 
-                       min='0' max='100' required>
-                <span>%</span>
-            </div>
-            <div class='input-group'>
-                <input type='submit' class='button' value='Update Settings'>
-            </div>
-        </form>
-    </div>
-
-    <div class='card'>
-        <h2>Fan Control</h2>
-        <div class='input-group'>
-            <label>Mode:</label>
-            <button class='button' onclick='updateFan("mode")'>
-                <span id='fanMode'>)rawliteral" + String(fanManualMode ? "Manual" : "Auto") + R"rawliteral(</span>
-            </button>
-        </div>
-        <div class='input-group'>
-            <label>Power:</label>
-            <button class='button' id='fanPowerBtn' onclick='updateFan("toggle")'>
-                <span id='fanPower'>)rawliteral" + String(fanIsOn ? "ON" : "OFF") + R"rawliteral(</span>
-            </button>
-        </div>
-        <form action='/fan-control' method='post'>
-            <div class='input-group'>
-                <label>On Duration (minutes):</label>
-                <input type='number' name='duration' 
-                       value=')rawliteral" + String(fanOnDuration/60000) + R"rawliteral('
-                       min='1' max='60' required>
-            </div>
-            <div class='input-group'>
-                <label>Interval (hours):</label>
-                <input type='number' name='interval' 
-                       value=')rawliteral" + String(fanInterval/3600000) + R"rawliteral('
-                       min='1' max='24' required>
-            </div>
-            <div class='input-group'>
-                <input type='submit' class='button' value='Update Fan Settings'>
-            </div>
-        </form>
-    </div>
-
-    <div class='card'>
-        <h2>Temperature History</h2>
-        <div class='chart-controls'>
-            <button class='button' onclick='changeTimeRange("tempChart", "day")'>Day</button>
-            <button class='button' onclick='changeTimeRange("tempChart", "week")'>Week</button>
-            <button class='button' onclick='changeTimeRange("tempChart", "month")'>Month</button>
-        </div>
-        <div class='chart-container'>
-            <canvas id='tempChart'></canvas>
-        </div>
-    </div>
-
-    <div class='card'>
-        <h2>Humidity History</h2>
-        <div class='chart-controls'>
-            <button class='button' onclick='changeTimeRange("humChart", "day")'>Day</button>
-            <button class='button' onclick='changeTimeRange("humChart", "week")'>Week</button>
-            <button class='button' onclick='changeTimeRange("humChart", "month")'>Month</button>
-        </div>
-        <div class='chart-container'>
-            <canvas id='humChart'></canvas>
-        </div>
-    </div>
-
-    <div class='card'>
-        <h2>Data Storage Settings</h2>
-        <form action='/storage-config' method='post'>
-            <div class='input-group'>
-                <label>Storage Interval (minutes):</label>
-                <input type='number' name='interval' value=')rawliteral" + 
-                String(recordInterval/60000) + R"rawliteral(' min='1' max='60' required>
-            </div>
-            <div class='input-group'>
-                <input type='submit' class='button' value='Update Interval'>
-            </div>
-        </form>
-        <div class='input-group' style='margin-top: 20px;'>
-            <button class='button danger' onclick='confirmDelete()'>Delete All Data</button>
-        </div>
-    </div>
-
-    <script>
-        let tempChart, humChart;
-        let currentTempRange = 'day';
-        let currentHumRange = 'day';
-
-        function initCharts() {
-            const commonOptions = {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        ticks: {
-                            maxRotation: 45,
-                            minRotation: 45
-                        }
-                    }
-                },
-                plugins: {
-                    tooltip: {
-                        callbacks: {
-                            title: function(context) {
-                                return context[0].label; // Mostrar fecha/hora completa en tooltip
-                            }
-                        }
-                    }
-                }
-            };
-
-            // Temperature Chart
-            const tempCtx = document.getElementById('tempChart').getContext('2d');
-            tempChart = new Chart(tempCtx, {
-                type: 'line',
-                data: {
-                    labels: [],
-                    datasets: [{
-                        label: 'Temperature (°C)',
-                        data: [],
-                        borderColor: 'rgb(255, 99, 132)',
-                        tension: 0.1
-                    }]
-                },
-                options: commonOptions
-            });
-
-            // Humidity Chart
-            const humCtx = document.getElementById('humChart').getContext('2d');
-            humChart = new Chart(humCtx, {
-                type: 'line',
-                data: {
-                    labels: [],
-                    datasets: [{
-                        label: 'Humidity (%)',
-                        data: [],
-                        borderColor: 'rgb(54, 162, 235)',
-                        tension: 0.1
-                    }]
-                },
-                options: commonOptions
-            });
-        }
-
-        function updateCharts() {
-            // Update Temperature Chart
-            fetch('/history?range=' + currentTempRange + '&type=temp')
-                .then(response => response.json())
-                .then(data => {
-                    tempChart.data.labels = data.labels;
-                    tempChart.data.datasets[0].data = data.values;
-                    tempChart.update();
-                });
-
-            // Update Humidity Chart
-            fetch('/history?range=' + currentHumRange + '&type=hum')
-                .then(response => response.json())
-                .then(data => {
-                    humChart.data.labels = data.labels;
-                    humChart.data.datasets[0].data = data.values;
-                    humChart.update();
-                });
-        }
-
-        function changeTimeRange(chartId, range) {
-            if (chartId === 'tempChart') {
-                currentTempRange = range;
-            } else {
-                currentHumRange = range;
-            }
-            updateCharts();
-        }
-
-        function confirmDelete() {
-            if (confirm('Are you sure you want to delete all historical data? This action cannot be undone.')) {
-                fetch('/delete-data', { method: 'POST' })
-                    .then(response => {
-                        if (response.ok) {
-                            alert('Data deleted successfully');
-                            updateCharts();
-                        } else {
-                            alert('Error deleting data');
-                        }
-                    });
-            }
-        }
-
-        // Initialize
-        initCharts();
-        updateCharts();
-        
-        // Update current values every 5 seconds
-        setInterval(function() {
-            fetch('/data')
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('temperature').textContent = data.temperature.toFixed(1);
-                    document.getElementById('humidity').textContent = data.humidity.toFixed(1);
-                    document.getElementById('fogStatus').textContent = data.fogState ? 'ON' : 'OFF';
-                });
-        }, 5000);
-
-        // Update charts every minute
-        setInterval(updateCharts, 60000);
-
-        // Actualizar el tiempo actual cada segundo
-        setInterval(function() {
-            const now = new Date();
-            document.getElementById('currentTime').textContent = 
-                now.toLocaleString('es-CO', { 
-                    year: 'numeric', 
-                    month: '2-digit', 
-                    day: '2-digit',
-                    hour: '2-digit', 
-                    minute: '2-digit',
-                    second: '2-digit'
-                });
-        }, 1000);
-
-        function updateFan(action) {
-            fetch('/fan-control?action=' + action, { method: 'POST' })
-                .then(response => {
-                    if (response.ok) {
-                        updateStatus();
-                    }
-                });
-        }
-
-        function updateStatus() {
-            fetch('/data')
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('temperature').textContent = data.temperature.toFixed(1);
-                    document.getElementById('humidity').textContent = data.humidity.toFixed(1);
-                    document.getElementById('fogStatus').textContent = data.fogState ? 'ON' : 'OFF';
-                    document.getElementById('fanPower').textContent = data.fanState ? 'ON' : 'OFF';
-                    document.getElementById('fanMode').textContent = data.fanManual ? 'Manual' : 'Auto';
-                    
-                    // Actualizar estilo del botón
-                    const fanBtn = document.getElementById('fanPowerBtn');
-                    if (data.fanState) {
-                        fanBtn.classList.add('active');
-                    } else {
-                        fanBtn.classList.remove('active');
-                    }
-                });
-        }
-    </script>
-</body>
-</html>)rawliteral";
-    return html;
-}
-
+// Modificar el código para servir el archivo HTML desde LittleFS
 void handleRoot() {
-    server.send(200, "text/html", getHTML());
+    File file = LittleFS.open("/index.html", "r");
+    if (file) {
+        server.streamFile(file, "text/html");
+        file.close();
+    } else {
+        server.send(500, "text/plain", "Error loading index.html");
+    }
 }
 
 void handleHistory() {
@@ -724,6 +403,25 @@ void setup() {
     server.on("/storage-config", HTTP_POST, handleStorageConfig);
     server.on("/delete-data", HTTP_POST, handleDeleteData);
     server.on("/fan-control", HTTP_POST, handleFanControl);
+    server.on("/styles.css", HTTP_GET, []() {
+        File file = LittleFS.open("/styles.css", "r");
+        if (file) {
+            server.streamFile(file, "text/css");
+            file.close();
+        } else {
+            server.send(404, "text/plain", "CSS not found");
+        }
+    });
+
+    server.on("/script.js", HTTP_GET, []() {
+        File file = LittleFS.open("/script.js", "r");
+        if (file) {
+            server.streamFile(file, "application/javascript");
+            file.close();
+        } else {
+            server.send(404, "text/plain", "JavaScript not found");
+        }
+    });
     server.begin();
     
     // Configurar pin del ventilador
