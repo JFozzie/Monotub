@@ -102,6 +102,8 @@ function updateStatus() {
             document.getElementById('fanPower').textContent = data.fanState ? 'ON' : 'OFF';
             document.getElementById('fanMode').textContent = data.fanManual ? 'Manual' : 'Auto';
             
+            document.querySelector('input[name="setpoint"]').value = data.setpoint.toFixed(1);
+            
             const fanBtn = document.getElementById('fanPowerBtn');
             if (data.fanState) {
                 fanBtn.classList.add('active');

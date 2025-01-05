@@ -53,6 +53,9 @@ unsigned long recordInterval = 300000; // 5 minutos por defecto
 
 // Agregar definiciones
 #define FAN_PIN D6          // GPIO12
+#define FAN_PWM_VALUE 102   // 10% de 1023
+#define FAN_PWM_FREQ 1000   // Frecuencia PWM en Hz
+
 #define FAN_DEFAULT_ON 300000    // 5 minutos en ms
 #define FAN_DEFAULT_INTERVAL 14400000  // 4 horas en ms
 
@@ -133,7 +136,8 @@ void handleData() {
     json += "\"humidity\":" + String(lastHumidity, 1) + ",";
     json += "\"fogState\":" + String(fogPulseState ? "true" : "false") + ",";
     json += "\"fanState\":" + String(fanIsOn ? "true" : "false") + ",";
-    json += "\"fanManual\":" + String(fanManualMode ? "true" : "false");
+    json += "\"fanManual\":" + String(fanManualMode ? "true" : "false") + ",";
+    json += "\"setpoint\":" + String(humiditySetpoint, 1);
     json += "}";
     server.send(200, "application/json", json);
 }
@@ -271,30 +275,30 @@ void controlFan(bool forcedOn = false) {
     
     // Modo manual
     if (fanManualMode) {
-        digitalWrite(FAN_PIN, fanIsOn ? HIGH : LOW);
+        analogWrite(FAN_PIN, fanIsOn ? FAN_PWM_VALUE : 0);
         return;
     }
     
     // Control basado en fog y tiempo
     if (fogPulseState) {
         // Encender con fog
-        digitalWrite(FAN_PIN, HIGH);
+        analogWrite(FAN_PIN, FAN_PWM_VALUE);
         fanIsOn = true;
         fanStartTime = currentMillis;
         lastFanStart = currentMillis;
     } else if (!fogPulseState && currentMillis - lastFanStart >= fanInterval) {
         // Ciclo normal cada 4 horas
-        digitalWrite(FAN_PIN, HIGH);
+        analogWrite(FAN_PIN, FAN_PWM_VALUE);
         fanIsOn = true;
         fanStartTime = currentMillis;
         lastFanStart = currentMillis;
     } else if (fanIsOn && !fogPulseState && currentMillis - fanStartTime >= fanOnDuration) {
         // Apagar después de la duración si no hay fog
-        digitalWrite(FAN_PIN, LOW);
+        analogWrite(FAN_PIN, 0);
         fanIsOn = false;
     } else if (fanIsOn && !fogPulseState) {
         // Apagar inmediatamente si el fog se apaga
-        digitalWrite(FAN_PIN, LOW);
+        analogWrite(FAN_PIN, 0);
         fanIsOn = false;
     }
 }
@@ -424,9 +428,10 @@ void setup() {
     });
     server.begin();
     
-    // Configurar pin del ventilador
+    // Configurar pin del ventilador para PWM
     pinMode(FAN_PIN, OUTPUT);
-    digitalWrite(FAN_PIN, LOW);
+    analogWrite(FAN_PIN, 0);  // Iniciar apagado
+    analogWriteFreq(FAN_PWM_FREQ);  // Establecer frecuencia PWM
 }
 
 void loop() {
